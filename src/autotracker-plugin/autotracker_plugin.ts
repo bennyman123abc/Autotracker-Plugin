@@ -9,6 +9,7 @@ import { Packet } from 'modloader64_api/ModLoaderDefaultImpls';
 
 import { JSONTemplate } from 'modloader64_api/JSONTemplate';
 import { IActor } from 'modloader64_api/OOT/IActor';
+import { RandomizerUtils } from './classes/RandomizerUtils';
 
 enum AutotrackerEvent {
     ON_CHEST_OPENED = 'Autotracker:onChestOpened',
@@ -31,8 +32,8 @@ enum MultiworldTrackerPayload {
     SEND_COLLECTABLE_CHANGE,
     SEND_SKULLTULA_CHANGE,
     SEND_EVENT_CHANGE,
-    SEND_OTHER_TRACKER,
     SEND_SCRUB_BUY,
+    SEND_OTHER_TRACKER,
 }
 
 class AutotrackerData extends JSONTemplate {
@@ -63,6 +64,7 @@ class autotracker_plugin implements IPlugin {
 
     ModLoader!: IModLoaderAPI;
     pluginName?: string | undefined;
+    randomizerUtils!: RandomizerUtils;
 
     saveLoaded: boolean = false;
 
@@ -93,6 +95,8 @@ class autotracker_plugin implements IPlugin {
     init(): void {
         this.wss = new Server({ port: 8080 })
         this.ModLoader.logger.info("AutoTracker WebSocket initalized on port 8080")
+
+        this.randomizerUtils = new RandomizerUtils(this.ModLoader);
 
         this.wss.on('connection', (socket) => {
             socket.on('message', (data) => {
@@ -245,7 +249,11 @@ class autotracker_plugin implements IPlugin {
     }
 
     sendSaveState() {
-        this.sendState(MultiworldTrackerPayload.SEND_SAVE, {save: this.core.save})
+        var save = Object.assign(this.core.save, {
+            world: this.randomizerUtils.getMultiworld(),
+        });
+        
+        this.sendState(MultiworldTrackerPayload.SEND_SAVE, {save});
     }
 
     sendChestState(chestOpened: AutotrackerData) {
